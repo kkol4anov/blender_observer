@@ -1,0 +1,11 @@
+blender-asset-tracer==1.18
+certifi==2024.8.30
+charset-normalizer==3.4.0
+idna==3.10
+pillow==11.0.0
+plyer==2.1.0
+pystray==0.19.5
+requests==2.32.3
+six==1.16.0
+urllib3==2.2.3
+watchdog==6.0.0
