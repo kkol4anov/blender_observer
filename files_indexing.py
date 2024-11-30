@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from blender_asset_tracer import blendfile, bpathlib
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from time import time
 import logging
 
@@ -20,7 +20,6 @@ def scan_blend_files(root_dir):
     for dirpath, _, filenames in os.walk(root_dir):
         for file in filenames:
             if file.lower().endswith('.blend'):
-                # blend_files.append(Path(dirpath) / file)
                 blend_files_paths.append(os.path.join(dirpath,file))
     
     return blend_files_paths
@@ -39,7 +38,7 @@ def extract_assets(blend_file_path):
         # Открытие файла .blend
         bf = blendfile.open_cached(Path(blend_file_path))
 
-        libraries = bf.find_blocks_from_code(b'LI')
+        bf_libraries = bf.find_blocks_from_code(b'LI')
 
         # since there is no docs of accepted keys, printing some keys here
         # logging.debug(f'{bf.code_index.keys()=}')
@@ -54,7 +53,10 @@ def extract_assets(blend_file_path):
         # DATA = wmWindow
         # LI = library
         
-        libraries = [lib_path_rel_to_abs(lib[b'name'], blend_file_path) for lib in libraries]
+        libraries = [lib_path_rel_to_abs(lib[b'name'], blend_file_path) for lib in bf_libraries]
+
+    except:
+        logging.error(f'Ошибка при чтении библиотек в файле {blend_file_path}')
     
     finally:
         bf.close()
@@ -147,32 +149,6 @@ def create_index(root_dir):
 
     logging.debug(f'indexing time {end_time_1-start_time_1}')
     logging.debug(f'merging time {end_time_2-start_time_2}')
-
-    # for blend_file_path in blend_files_paths:
-    #     file_libraries = extract_assets(blend_file_path)        
-    #     blend_file_path: str = os.path.normpath(blend_file_path)
-
-    #     index['all_files'][blend_file_path] = {
-    #         'linkers': [],
-    #         'libraries': file_libraries
-    #     }
-
-    #     for lib in file_libraries:
-    #         if index['all_files'].get(lib):
-    #             index['all_files'][lib]['linkers'].append(blend_file_path)
-    #         else:
-    #             index['all_files'][lib] = {
-    #         'linkers': [blend_file_path],
-    #         'libraries': []
-    #         }
-    #         lib_exists = os.path.exists(lib)
-    #         if not lib_exists:
-    #             if index['missed_libraries'].get(lib):
-    #                 index['missed_libraries'][lib]['linkers'].append(blend_file_path)
-    #             else:
-    #                 index['missed_libraries'][lib] = {
-    #             'linkers': [blend_file_path],
-    #             }
                 
     return index
 
@@ -198,13 +174,15 @@ def update_library_path(blend_file_path: str, old_library_path: str, new_library
         old_library_path (str): Текущий путь к библиотеке, который нужно заменить.
         new_library_path (str): Новый путь для библиотеки.
     """
-    # Открываем файл .blend
-    bf = blendfile.BlendFile(Path(blend_file_path), "rb+")
     
     try:
+        # Открываем файл .blend
+        bf = blendfile.BlendFile(Path(blend_file_path), "rb+")
+
         # Ищем все блоки библиотеки (с кодом 'LI')
         libraries = bf.find_blocks_from_code(b'LI')
         
+        logging.info(f'Меняем ссылки в библиотеках {blend_file_path}')
         # Проверяем и обновляем путь к библиотеке
         for lib in libraries:
             lib_name = lib.get(b'name')
@@ -216,43 +194,11 @@ def update_library_path(blend_file_path: str, old_library_path: str, new_library
                 )
                 lib[b'filepath'] = new_library_path  # Устанавливаем новый абсолютный путь
                 lib[b"name"] = path # Устанавливаем новый относительный путь
+    except:
+        logging.error(f'Ошибка при замене ссылок в файле {blend_file_path}')
     finally:
         # Закрываем файл
         bf.close()
-
-    # Меняем ссылки в библиотеках
-    # print("Changing links...")
-    # errors = 0
-
-    # for file in Blend.collection:
-    #     print("File:", file.pathname)
-    #     try:
-    #         blend = blendfile.BlendFile(Path(file.pathname), "rb+")
-    #     except:
-    #         errors += 1
-    #         print("[EXCEPTION] Failed to load")
-    #         traceback.print_exc()
-    #         continue
-
-    #     try:
-    #         for block in blend.find_blocks_from_code(b'LI'):
-    #             absolute = bpathlib.BlendPath(block[b"filepath"]).absolute(file.directory.encode(encoding = "utf-8"))
-    #             mapping = Alias.get(os.path.relpath(absolute.decode(), directory))
-    #             if not mapping: continue
-    #             path = bpathlib.BlendPath.mkrelative(
-    #                 Path(os.path.join(directory, mapping)),
-    #                 blend.filepath
-    #             )
-    #             if len(path) > 1020:    # 1024
-    #                 raise RuntimeError("Path is too long: " + path)
-    #             print(f"Changed {block[b'filepath']} to {path}, {len(path)}")
-    #             block[b"filepath"] = path
-    #             block[b"name"] = path
-    #     except:
-    #         errors += 1
-    #         print("[EXCEPTION] Failed to change path")
-    #         traceback.print_exc()
-
 
 if __name__ == "__main__":
     root_directory = 'testing_dirs'

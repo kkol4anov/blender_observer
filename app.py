@@ -21,8 +21,8 @@ import files_indexing
 format_info="[%(levelname)s] -> %(message)s"
 format_debug="[%(levelname)s] [%(filename)s] [%(lineno)d] -> %(message)s"
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_debug)
-# logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=format_info)
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_debug)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=format_info)
 
 monitoring_enabled = True  # Флаг для управления мониторингом
 path_to_monitor = os.path.abspath(os.sep)  # Путь по умолчанию
@@ -50,24 +50,6 @@ class FileEventHandler(FileSystemEventHandler):
 
             if not updated:
                 return
-
-            # if redirectors.get(old_path):
-            #     first_path = redirectors[old_path].get('first_path')
-            # else:
-            #     first_path = old_path
-
-            # linkers = get_linkers(first_path)
-
-            # if not linkers:
-            #     return
-            
-            # if old_path not in redirectors.keys():
-            #     redirectors[new_path] = {'linkers': linkers, 'first_path': old_path}
-            # else:
-            #     redirectors[new_path] = redirectors.pop(old_path)
-
-            # if new_path == redirectors[new_path].get('first_path'):
-            #     redirectors.pop(new_path)
             
             update_menu(self.icon)
 
@@ -138,8 +120,8 @@ def update_redirectors(old_path, new_path, redirectors):
 
     return True
 
-def write_edit_redirectors(redirectors):
-    with open('edit_redirectors.csv', 'w', newline='') as csvfile:
+def write_redirectors_list(redirectors):
+    with open('redirectors_list.csv', 'w', newline='') as csvfile:
         fieldnames = ['new_path', 'old_path', 'linker']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -150,9 +132,9 @@ def write_edit_redirectors(redirectors):
             for blend_file in blend_files:
                 writer.writerow({'new_path': current_path, 'old_path': first_path, 'linker': blend_file})    
 
-def read_edit_redirectors():
+def read_redirectors_list():
     new_redirectors = {}
-    with open('edit_redirectors.csv', newline='') as csvfile:
+    with open('redirectors_list.csv', newline='') as csvfile:
         # TODO Удалить исправленные missed_lib через проверку двух два сетов: до и после
 
         reader = csv.DictReader(csvfile)
@@ -173,47 +155,25 @@ def read_edit_redirectors():
     return new_redirectors
 
 def open_redirectors_editor():
-    command = r'"C:\Program Files\WindowsApps\38526MediaLife.CoolOffice_2.1.0.0_x86__1crh1k73ty8mg\program\soffice.exe" edit_redirectors.csv'
+    command = r'"C:\Program Files\WindowsApps\38526MediaLife.CoolOffice_2.1.0.0_x86__1crh1k73ty8mg\program\soffice.exe" redirectors_list.csv'
     subprocess.call(command)
 
-def edit_redirectors(icon):
+def redirectors_list(icon):
     global redirectors
 
-    write_edit_redirectors(redirectors)
-
-    # with open('edit_redirectors.csv', 'w', newline='') as csvfile:
-    #     fieldnames = ['new_path', 'old_path', 'linker']
-    #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    #     writer.writeheader()
-    #     for redirector_key, redirector_value in redirectors.items():
-    #         current_path: str = redirector_key
-    #         first_path: str = redirector_value['first_path']
-    #         blend_files: list = redirector_value['linkers']
-    #         for blend_file in blend_files:
-    #             writer.writerow({'new_path': current_path, 'old_path': first_path, 'linker': blend_file})
-                # logging.info(f"Processing file: {blend_file}")
-
+    write_redirectors_list(redirectors)
 
     open_redirectors_editor()
 
-    new_redirectors = read_edit_redirectors()
-
-    # with open('edit_redirectors.csv', newline='') as csvfile:
-
-    #     reader = csv.DictReader(csvfile)
-    #     for row in reader:
-    #         if not new_redirectors.get(row['new_path']):
-    #             new_redirectors[row['new_path']] = {'linkers': [row['linker']], 'first_path': row['old_path']}
-    #         else:
-    #             new_redirectors[row['new_path']]['linkers'].append(row['linker'])
+    new_redirectors = read_redirectors_list()
 
     logging.debug(f'{new_redirectors=}')
     redirectors.update(new_redirectors)
     logging.debug(f'{redirectors=}')
     update_menu(icon)
     
-    if os.path.exists('edit_redirectors.csv'):
-        os.remove('edit_redirectors.csv')
+    if os.path.exists('redirectors_list.csv'):
+        os.remove('redirectors_list.csv')
 
 
 def hide_console():
@@ -388,7 +348,7 @@ def update_links(icon):
         if len(redirectors) == 0:
             info_msg = 'Ссылки в файлах исправлены'
         else:
-            info_msg = 'Не все ссылки в файлах исправлены. Нужно редактировать вручную'
+            info_msg = 'Не все ссылки в файлах исправлены. Оставшиеся нужно редактировать вручную'
 
         logging.info(info_msg)
         send_notification(info_msg)
@@ -408,7 +368,7 @@ def set_tray_menu():
         ),
         MenuItem(f"Текущий путь: {path_to_monitor}", set_path),  # Текущий путь для мониторинга
         MenuItem(f"Исправить ссылки: {len(redirectors.items())}", update_links),
-        MenuItem(f"Редактировать словарь ссылок", edit_redirectors),
+        MenuItem(f"Редактировать список ссылок", redirectors_list),
         MenuItem("Выход", lambda icon: icon.stop())
     )
     return menu
