@@ -37,7 +37,6 @@ class FileEventHandler(FileSystemEventHandler):
         self.filter_func = filter_func
         self.icon = icon
         self.last_deleted = ('', 0)
-        self.last_rename_or_move_time = 0
         self.rename_or_move_timer = None
 
     def on_moved(self, event):
