@@ -37,6 +37,8 @@ class FileEventHandler(FileSystemEventHandler):
         self.filter_func = filter_func
         self.icon = icon
         self.last_deleted = ('', 0)
+        self.last_rename_or_move_time = 0
+        self.rename_or_move_timer = None
 
     def on_moved(self, event):
         global redirectors
@@ -55,9 +57,10 @@ class FileEventHandler(FileSystemEventHandler):
 
             info_msg = 'Переименован файл библиотеки, ссылки добавлены для исправления'
             logging.info(f'{info_msg}')
-            send_notification(info_msg)
 
-            logging.debug(f'{redirectors=}')
+            # logging.debug(f'{redirectors=}')
+
+            self.after(info_msg)
 
     def on_created(self, event):
         global redirectors
@@ -78,10 +81,10 @@ class FileEventHandler(FileSystemEventHandler):
 
                     info_msg = 'Перемещён файл библиотеки, ссылки добавлены для исправления'
                     logging.info(f'{info_msg}')
-                    send_notification(info_msg)
 
-                    logging.debug(f'{redirectors=}')                    
+                    # logging.debug(f'{redirectors=}')
 
+                    self.after(info_msg)
                 else:    
                     logging.info(f"Файл создан: {src_path}")
 
@@ -98,6 +101,19 @@ class FileEventHandler(FileSystemEventHandler):
     #         if self.filter_func(event.src_path):
     #             src_path = os.path.normpath(event.src_path)
     #             logging.info(f"Файл изменён: {src_path}")
+
+    def after(self, info_msg):
+        if self.rename_or_move_timer:
+            self.rename_or_move_timer.cancel()
+        self.rename_or_move_timer = threading.Timer(1, self.lib_rename_or_move_msg, [info_msg])
+        self.rename_or_move_timer.name = 'msg_timer_thread'
+        self.rename_or_move_timer.start()
+    
+    def lib_rename_or_move_msg(self, info_msg):
+        send_notification(info_msg)
+        if self.rename_or_move_timer:
+            self.rename_or_move_timer.cancel()
+
 
 def update_redirectors(old_path, new_path, redirectors):
     if redirectors.get(old_path):
@@ -288,12 +304,11 @@ def check_not_existed_libs(icon):
         redirectors.update(new_redirectors)
         update_menu(icon)
 
-
-
 def start_monitoring(path, filter_func, icon):
     """Запустить мониторинг указанного пути."""
     event_handler = FileEventHandler(filter_func, icon)
     observer = Observer()
+    observer.name = 'observer_thread'
     observer.schedule(event_handler, path, recursive=True)
     observer.start()
     return observer
@@ -397,7 +412,7 @@ def main():
     observer = start_monitoring(path_to_monitor, filter_func, icon)
 
     # Запускаем трей в отдельном потоке
-    tray_thread = threading.Thread(target=icon.run)
+    tray_thread = threading.Thread(name='tray_thread', target=icon.run)
     tray_thread.start()
 
     hide_console()

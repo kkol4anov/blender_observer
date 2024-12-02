@@ -6779,3 +6779,8 @@ blender_script.py
 blender_sub.py
 files_indexing.py.bak
 testing_dirs/top_t_dir_1/t_dir_1/dir1/lib1_test.blend
+testing_dirs/top_t_dir_1/t_dir_1/dir1/bob1_test.blend
+testing_dirs/top_t_dir_1/t_dir_1/dir1/bob2.blend
+testing_dirs/top_t_dir_1/t_dir_1/dir1/bob3.blend
+testing_dirs/top_t_dir_1/t_dir_1/dir1/bob4.blend
+testing_dirs/top_t_dir_1/t_dir_1/dir1/bob5.blend
