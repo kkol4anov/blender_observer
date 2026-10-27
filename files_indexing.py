@@ -8,10 +8,11 @@ from concurrent.futures import ProcessPoolExecutor
 from time import time
 import logging
 
-format_info="[%(levelname)s] -> %(message)s"
-format_debug="[%(levelname)s] [%(filename)s] [%(lineno)d] -> %(message)s"
+# format_info="[%(levelname)s] -> %(message)s"
+# format_debug="[%(levelname)s] [%(filename)s] [%(lineno)d] -> %(message)s"
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_debug)
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_debug)
+# logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=format_info)
 
 def scan_blend_files(root_dir):
     blend_files_paths = []
